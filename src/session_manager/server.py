@@ -574,13 +574,31 @@ def open_app_window(url, width=1280, height=860):
         os.makedirs(profile, exist_ok=True)
     except OSError:
         profile = tempfile.mkdtemp(prefix="aism-app-")
+    # 这个窗口只渲染本地一个静态页面，用不到 GPU 加速、扩展、同步、
+    # 组件更新、崩溃上报和 Edge 的后台服务；关掉它们能把独立 profile
+    # 拉起的浏览器进程树从 ~330MB 压到 ~185MB 私有内存（实测）。
+    # 如果哪天窗口出现黑屏/排版异常，先去掉 --disable-gpu 再排查。
+    lean_flags = [
+        "--disable-gpu",
+        "--disable-extensions",
+        "--disable-sync",
+        "--disable-component-update",
+        "--disable-background-networking",
+        "--disable-breakpad",
+        "--disable-client-side-phishing-detection",
+        "--disable-default-apps",
+        "--no-service-autorun",
+        "--metrics-recording-only",
+        "--disable-features=msEdgeSearchIndexer,msEdgeSidebarV2,Translate,"
+        "OptimizationHints,MediaRouter",
+    ]
     args = [
         exe, "--app=" + url + "?app=1",
         "--user-data-dir=" + profile,
         "--window-size=%d,%d" % (width, height),
         "--no-first-run", "--no-default-browser-check",
         "--disable-background-mode",
-    ]
+    ] + lean_flags
     try:
         return subprocess.Popen(args, stdout=subprocess.DEVNULL,
                                 stderr=subprocess.DEVNULL)
